@@ -2,6 +2,7 @@
 using ChessGame2.Models;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
@@ -23,6 +24,9 @@ namespace ChessGame2
         PieceImages pieceImages = new PieceImages();
 
         List<(int Row, int Column)> LegalMoves = new List<(int Row, int Column)>();
+
+        BitmapImage bitmap;
+
 
         public MainWindow()
         {
@@ -1218,7 +1222,7 @@ namespace ChessGame2
         {
             Border clickedSquare = sender as Border;
 
-            var (row, column) = ((int, int))clickedSquare.Tag;  
+            var (row, column) = ((int, int))clickedSquare.Tag;
 
             int oldIndex = piece.Row * 8 + piece.Column;
             int newIndex = row * 8 + column;
@@ -1226,9 +1230,7 @@ namespace ChessGame2
             if (LegalMoves.Contains((row, column)))
             {
                 if (MoveLeavesKingInCheck(piece, row, column))
-                {
                     return;
-                }
 
                 Border oldPieceSquare = ChessBoardUI.Children[oldIndex] as Border;
                 Border newPieceSquare = ChessBoardUI.Children[newIndex] as Border;
@@ -1253,6 +1255,8 @@ namespace ChessGame2
                 chessBoard[row, column] = piece;
 
                 newPieceSquare.Child = pieceImage;
+
+                PawnUpgrade(piece, row, column);
 
                 piece.DidFirstMove = true;
 
@@ -1736,14 +1740,102 @@ namespace ChessGame2
             return kingInCheck;
         }
 
-        //private Piece PawnUpgrade(Piece piece, int targetRow, int targetColumn)
-        //{
-        //    return null;
-        //}
-        //
+        private void PawnUpgrade(Piece piece, int targetRow, int targetColumn) // Yeni Ekledim
+        {
+            if (piece.Type == PieceType.Pawn)
+            {
+                if (piece.Color == PieceColor.White && targetRow == 0)
+                {
+                    PieceSelectionForm form = new PieceSelectionForm(piece, targetRow, targetColumn);
+
+                    if (form.ShowDialog() == true)
+                    {
+                        piece = form.piece;
+                    }
+
+                    int index = piece.Row * 8 + piece.Column;
+                    Border square = ChessBoardUI.Children[index] as Border;
+
+                    BitmapImage bitmap = null;
+
+                    switch (piece.Type)
+                    {
+                        case PieceType.Rook:
+                            bitmap = new BitmapImage(pieceImages.RookWhiteImagePath);
+                            break;
+
+                        case PieceType.Knight:
+                            bitmap = new BitmapImage(pieceImages.KnightWhiteImagePath);
+                            break;
+
+                        case PieceType.Bishop:
+                            bitmap = new BitmapImage(pieceImages.BishopWhiteImagePath);
+                            break;
+
+                        case PieceType.Queen:
+                            bitmap = new BitmapImage(pieceImages.QueenWhiteImagePath);
+                            break;
+                    }
+
+                    if (bitmap != null)
+                    {
+                        Image image = new Image();
+
+                        image.Source = bitmap;
+                        image.Stretch = Stretch.Uniform;
+                        image.IsHitTestVisible = false;
+
+                        square.Child = image;
+                    }
+                }
+                if (piece.Color == PieceColor.Black && targetRow == 7)
+                {
+                    PieceSelectionForm form = new PieceSelectionForm(piece, targetRow, targetColumn);
+
+                    if (form.ShowDialog() == true)
+                    {
+                        piece = form.piece;
+                    }
+
+                    int index = piece.Row * 8 + piece.Column;
+                    Border square = ChessBoardUI.Children[index] as Border;
+
+                    BitmapImage bitmap = null;
+
+                    switch (piece.Type)
+                    {
+                        case PieceType.Rook:
+                            bitmap = new BitmapImage(pieceImages.RookBlackImagePath);
+                            break;
+
+                        case PieceType.Knight:
+                            bitmap = new BitmapImage(pieceImages.KnightBlackImagePath);
+                            break;
+
+                        case PieceType.Bishop:
+                            bitmap = new BitmapImage(pieceImages.BishopBlackImagePath);
+                            break;
+
+                        case PieceType.Queen:
+                            bitmap = new BitmapImage(pieceImages.QueenBlackImagePath);
+                            break;
+                    }
+
+                    if (bitmap != null)
+                    {
+                        Image image = new Image();
+                        image.Source = bitmap;
+                        image.Stretch = Stretch.Uniform;
+                        image.IsHitTestVisible = false;
+
+                        square.Child = image;
+                    }
+                }
+            }
+        }
     }
 }
 // - - - - EKLENECEKLER - - - - 
 // 1. Ses eklenecek
 // 2. Yediğimiz taşlar bizim isimlerin yanında gözükecek
-// 3. Piyon terfisi
+// Yenen taraf için sevinç müziği olsun, yenilen taraf için ise üzgün müzik çalsın

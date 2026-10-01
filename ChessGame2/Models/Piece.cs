@@ -23,7 +23,7 @@ namespace ChessGame2.Models
         King
     }
 
-    internal class Piece
+    public class Piece
     {
         public int ID { get; set; }
 
