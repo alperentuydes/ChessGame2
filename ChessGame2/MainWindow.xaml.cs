@@ -1740,7 +1740,7 @@ namespace ChessGame2
         //{
         //    return null;
         //}
-
+        //
     }
 }
 // - - - - EKLENECEKLER - - - - 
