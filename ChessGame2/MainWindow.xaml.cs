@@ -1020,23 +1020,23 @@ namespace ChessGame2
 
                 if (piece.Column + 1 <= 7)
                 {
-                    int targetRow = piece.Row;
-                    int targetColumn = piece.Column + 1;
+                        int targetRow = piece.Row;
+                        int targetColumn = piece.Column + 1;
 
-                    int index = targetRow * 8 + targetColumn;
-                    Border square = ChessBoardUI.Children[index] as Border;
-                    Piece targetPiece = chessBoard[targetRow, targetColumn];
+                        int index = targetRow * 8 + targetColumn;
+                        Border square = ChessBoardUI.Children[index] as Border;
+                        Piece targetPiece = chessBoard[targetRow, targetColumn];
 
-                    if (targetPiece == null)
-                    {
-                        square.Background = Brushes.Red;
-                        LegalMoves.Add((targetRow, targetColumn));
-                    }
-                    else if (targetPiece.Color != piece.Color)
-                    {
-                        square.Background = Brushes.DarkRed;
-                        LegalMoves.Add((targetRow, targetColumn));
-                    }
+                        if (targetPiece == null)
+                        {
+                            square.Background = Brushes.Red;
+                            LegalMoves.Add((targetRow, targetColumn));
+                        }
+                        else if (targetPiece.Color != piece.Color)
+                        {
+                            square.Background = Brushes.DarkRed;
+                            LegalMoves.Add((targetRow, targetColumn));
+                        }
                 }
 
 
@@ -1833,6 +1833,23 @@ namespace ChessGame2
                 }
             }
         }
+
+        //private void Castling(Piece piece)
+        //{
+        //    if (piece.Type == PieceType.King)
+        //    {
+        //        if(PieceColor.White == piece.Color)
+        //        {
+        //            Piece LeftRook = chessBoard[7, 0];
+        //            Piece RightRook = chessBoard[7, 7];
+        //        }
+        //        if (PieceColor.Black == piece.Color)
+        //        {
+
+        //        }
+        //    }
+        //}
+
     }
 }
 // - - - - EKLENECEKLER - - - - 
