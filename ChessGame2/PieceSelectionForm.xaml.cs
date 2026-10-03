@@ -1,4 +1,5 @@
-﻿using ChessGame2.Models;
+﻿using ChessGame2.Assets;
+using ChessGame2.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +29,8 @@ namespace ChessGame2
         public SelectedPiece selectedPiece;
         List<Grid> gridList = new List<Grid>();
         bool hasSelectedPiece = false;
+        PieceColor pieceColor;
+        PieceImages pieceImages = new PieceImages();
 
         public PieceSelectionForm(Piece piece, int targetRow, int targetColumn)
         {
@@ -35,9 +38,71 @@ namespace ChessGame2
             this.piece = piece;
             this.targetRow = targetRow;
             this.targetColumn = targetColumn;
+            this.pieceColor = piece.Color;
+            ImageByColor(piece.Color);
             foreach (Grid grid in GridRows.Children)
             {
                 gridList.Add(grid);
+            }
+        }
+
+        private void ImageByColor(PieceColor color)
+        {
+            if (color == PieceColor.White)
+            {
+                Border queenSquare = QueenImage;
+                Border knightSquare = KnightImage;
+                Border bishopSquare = BishopImage;
+                Border rookSquare = RookImage;
+
+                Image queenImage = new Image();
+                queenImage.Source = pieceImages.BitmapWhiteQueen;
+                queenImage.Stretch = Stretch.Uniform;
+
+                Image knightImage = new Image();
+                knightImage.Source = pieceImages.BitmapWhiteKnight;
+                knightImage.Stretch = Stretch.Uniform;
+
+                Image bishopImage = new Image();
+                bishopImage.Source = pieceImages.BitmapWhiteBishop;
+                bishopImage.Stretch = Stretch.Uniform;
+
+                Image rookImage = new Image();
+                queenImage.Source = pieceImages.BitmapWhiteRook;
+                queenImage.Stretch = Stretch.Uniform;
+
+                queenSquare.Child = queenImage;
+                knightSquare.Child = knightImage;
+                bishopSquare.Child = bishopImage;
+                rookSquare.Child = rookImage;
+            }
+            else
+            {
+                Border queenSquare = QueenImage;
+                Border knightSquare = KnightImage;
+                Border bishopSquare = BishopImage;
+                Border rookSquare = RookImage;
+
+                Image queenImage = new Image();
+                queenImage.Source = pieceImages.BitmapBlackQueen;
+                queenImage.Stretch = Stretch.Uniform;
+
+                Image knightImage = new Image();
+                knightImage.Source = pieceImages.BitmapBlackKnight;
+                knightImage.Stretch = Stretch.Uniform;
+
+                Image bishopImage = new Image();
+                bishopImage.Source = pieceImages.BitmapBlackBishop;
+                bishopImage.Stretch = Stretch.Uniform;
+
+                Image rookImage = new Image();
+                rookImage.Source = pieceImages.BitmapBlackRook;
+                rookImage.Stretch = Stretch.Uniform;
+
+                queenSquare.Child = queenImage;
+                knightSquare.Child = knightImage;
+                bishopSquare.Child = bishopImage;
+                rookSquare.Child = rookImage;
             }
         }
 

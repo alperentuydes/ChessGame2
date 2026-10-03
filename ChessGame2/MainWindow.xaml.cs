@@ -27,6 +27,8 @@ namespace ChessGame2
 
         BitmapImage bitmap;
 
+        bool canCastling = true;
+
 
         public MainWindow()
         {
@@ -1020,25 +1022,47 @@ namespace ChessGame2
 
                 if (piece.Column + 1 <= 7)
                 {
-                        int targetRow = piece.Row;
-                        int targetColumn = piece.Column + 1;
+                    int targetRow = piece.Row;
+                    int targetColumn1 = piece.Column + 1;
 
-                        int index = targetRow * 8 + targetColumn;
-                        Border square = ChessBoardUI.Children[index] as Border;
-                        Piece targetPiece = chessBoard[targetRow, targetColumn];
+                    Piece targetPiece1 = chessBoard[targetRow, targetColumn1];
 
-                        if (targetPiece == null)
+                    int index1 = targetRow * 8 + targetColumn1;
+                    Border targetSquare1 = ChessBoardUI.Children[index1] as Border;
+
+                    if (targetPiece1 == null)
+                    {
+                        LegalMoves.Add((targetRow, targetColumn1));
+                        targetSquare1.Background = Brushes.Red;
+                    }
+                    else if (targetPiece1.Color != piece.Color)
+                    {
+                        LegalMoves.Add((targetRow, targetColumn1));
+                        targetSquare1.Background = Brushes.DarkRed;
+                    }
+
+                    if (piece.DidFirstMove == false && piece.Column == 4)
+                    {
+                        Piece rightRook = chessBoard[piece.Row, 7];
+
+                        if (rightRook != null && rightRook.Type == PieceType.Rook && rightRook.Color == piece.Color && rightRook.DidFirstMove == false)
                         {
-                            square.Background = Brushes.Red;
-                            LegalMoves.Add((targetRow, targetColumn));
+                            int targetColumn2 = piece.Column + 2;
+
+                            if (chessBoard[targetRow, piece.Column + 1] == null && chessBoard[targetRow, targetColumn2] == null)
+                            {
+                                if (IsKingInCheck(piece.Color) == false && CanCastling(piece, piece.Row, piece.Column + 1) && CanCastling(piece, piece.Row, piece.Column + 2))
+                                {
+                                    int index2 = targetRow * 8 + targetColumn2;
+                                    Border targetSquare2 = ChessBoardUI.Children[index2] as Border;
+
+                                    LegalMoves.Add((targetRow, targetColumn2));
+                                    targetSquare2.Background = Brushes.Red;
+                                }
+                            }
                         }
-                        else if (targetPiece.Color != piece.Color)
-                        {
-                            square.Background = Brushes.DarkRed;
-                            LegalMoves.Add((targetRow, targetColumn));
-                        }
+                    }
                 }
-
 
                 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
                 // = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
@@ -1047,21 +1071,44 @@ namespace ChessGame2
                 if (piece.Column - 1 >= 0)
                 {
                     int targetRow = piece.Row;
-                    int targetColumn = piece.Column - 1;
+                    int targetColumn1 = piece.Column - 1;
 
-                    int index = targetRow * 8 + targetColumn;
-                    Border square = ChessBoardUI.Children[index] as Border;
-                    Piece targetPiece = chessBoard[targetRow, targetColumn];
+                    Piece targetPiece1 = chessBoard[targetRow, targetColumn1];
 
-                    if (targetPiece == null)
+                    int index1 = targetRow * 8 + targetColumn1;
+                    Border targetSquare1 = ChessBoardUI.Children[index1] as Border;
+
+                    if (targetPiece1 == null)
                     {
-                        square.Background = Brushes.Red;
-                        LegalMoves.Add((targetRow, targetColumn));
+                        LegalMoves.Add((targetRow, targetColumn1));
+                        targetSquare1.Background = Brushes.Red;
                     }
-                    else if (targetPiece.Color != piece.Color)
+                    else if (targetPiece1.Color != piece.Color)
                     {
-                        square.Background = Brushes.DarkRed;
-                        LegalMoves.Add((targetRow, targetColumn));
+                        LegalMoves.Add((targetRow, targetColumn1));
+                        targetSquare1.Background = Brushes.DarkRed;
+                    }
+
+                    if (piece.DidFirstMove == false && piece.Column == 4)
+                    {
+                        Piece leftRook = chessBoard[piece.Row, 0];
+
+                        if (leftRook != null && leftRook.Type == PieceType.Rook && leftRook.Color == piece.Color && leftRook.DidFirstMove == false)
+                        {
+                            if (chessBoard[targetRow, 1] == null && chessBoard[targetRow, 2] == null && chessBoard[targetRow, 3] == null)
+                            {
+                                if (IsKingInCheck(piece.Color) == false && CanCastling(piece, piece.Row, piece.Column - 1) && CanCastling(piece, piece.Row, piece.Column - 2))
+                                {
+                                    int targetColumn2 = piece.Column - 2;
+                                    int index2 = targetRow * 8 + targetColumn2;
+
+                                    Border targetSquare2 = ChessBoardUI.Children[index2] as Border;
+
+                                    LegalMoves.Add((targetRow, targetColumn2));
+                                    targetSquare2.Background = Brushes.Red;
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -1232,6 +1279,25 @@ namespace ChessGame2
                 if (MoveLeavesKingInCheck(piece, row, column))
                     return;
 
+                bool isCastling = piece.Type == PieceType.King && Math.Abs(column - piece.Column) == 2;
+
+                if (isCastling)
+                {
+                    // Burada şah çekildiğini kontrol ettirip eğer fonksiyon RETURN dönerse ChangeTurn olmaması lazım.
+                    if (IsKingInCheck(piece.Color) == false)
+                    {
+                        Castling(piece, row, column);
+
+                        piece.DidFirstMove = true;
+
+                        LegalMoves.Clear();
+                        ResetAllColors();
+                        ChangeTurn();
+                    }
+
+                    return;
+                }
+
                 Border oldPieceSquare = ChessBoardUI.Children[oldIndex] as Border;
                 Border newPieceSquare = ChessBoardUI.Children[newIndex] as Border;
 
@@ -1246,14 +1312,12 @@ namespace ChessGame2
                 }
 
                 chessBoard[piece.Row, piece.Column] = null;
-
                 oldPieceSquare.Child = null;
 
                 piece.Row = row;
                 piece.Column = column;
 
                 chessBoard[row, column] = piece;
-
                 newPieceSquare.Child = pieceImage;
 
                 PawnUpgrade(piece, row, column);
@@ -1261,9 +1325,7 @@ namespace ChessGame2
                 piece.DidFirstMove = true;
 
                 LegalMoves.Clear();
-
                 ResetAllColors();
-
                 ChangeTurn();
             }
         }
@@ -1280,7 +1342,7 @@ namespace ChessGame2
             }
         }
 
-        private bool IsKingInCheck(PieceColor kingColor)
+        private bool IsKingInCheck(PieceColor kingColor) // taşları döndürüp değişkene atayıp => gidebileceği yerlerde King var mı?
         {
             PieceColor enemyColor;
 
@@ -1695,28 +1757,7 @@ namespace ChessGame2
             return false;
         }
 
-        //private bool MoveLeavesKingInCheck(Piece piece, int targetRow, int targetColumn)
-        //{
-        //    int oldRow = piece.Row;
-        //    int oldColumn = piece.Column;
-
-        //    Piece targetPiece = chessBoard[targetRow, targetColumn];
-
-        //    chessBoard[oldRow, oldColumn] = null;
-        //    chessBoard[targetRow, targetColumn] = piece;
-
-        //    piece.Row = targetRow;
-        //    piece.Column = targetColumn;
-
-        //    bool kingInCheck = IsKingInCheck(piece.Color);
-
-        //    chessBoard[oldRow, oldColumn] = piece;
-        //    chessBoard[targetRow, targetColumn] = null;
-
-        //    return kingInCheck;
-        //}
-
-        private bool MoveLeavesKingInCheck(Piece piece, int targetRow, int targetColumn)
+        private bool MoveLeavesKingInCheck(Piece piece, int targetRow, int targetColumn) // taşı başka bir yere hareket etmemtirdiğimde king şah oluyor mu ?
         {
             int oldRow = piece.Row;
             int oldColumn = piece.Column;
@@ -1834,21 +1875,498 @@ namespace ChessGame2
             }
         }
 
-        //private void Castling(Piece piece)
-        //{
-        //    if (piece.Type == PieceType.King)
-        //    {
-        //        if(PieceColor.White == piece.Color)
-        //        {
-        //            Piece LeftRook = chessBoard[7, 0];
-        //            Piece RightRook = chessBoard[7, 7];
-        //        }
-        //        if (PieceColor.Black == piece.Color)
-        //        {
+        private void Castling(Piece piece, int targetRow, int targetColumn)
+        {
+            if (piece.Type == PieceType.King)
+            {
+                if (PieceColor.White == piece.Color)
+                {
+                    if (targetRow == 7 && targetColumn == 6)
+                    {
+                        int pieceIndex = piece.Row * 8 + piece.Column;
 
-        //        }
-        //    }
-        //}
+                        Piece RightRook = chessBoard[7, 7];
+                        if (RightRook != null && RightRook.DidFirstMove == false)
+                        {
+                            int rookIndex = RightRook.Row * 8 + RightRook.Column;
+
+                            Border rookSquare = ChessBoardUI.Children[rookIndex] as Border;
+                            Border pieceSquare = ChessBoardUI.Children[pieceIndex] as Border;
+
+                            Piece targetPiece1 = chessBoard[7, 5];
+                            Piece targetPiece2 = chessBoard[7, 6];
+
+                            if (targetPiece1 == null && targetPiece2 == null)
+                            {
+                                int target1Index = 7 * 8 + 5;
+                                int target2Index = 7 * 8 + 6;
+
+                                Border squareTarget1 = ChessBoardUI.Children[target1Index] as Border;
+                                Border squareTarget2 = ChessBoardUI.Children[target2Index] as Border;
+
+                                Image rookImage = rookSquare.Child as Image;
+                                Image kingImage = pieceSquare.Child as Image;
+
+                                chessBoard[7, 7] = null;
+                                chessBoard[7, 4] = null;
+
+                                RightRook.Row = 7;
+                                RightRook.Column = 5;
+                                RightRook.DidFirstMove = true;
+
+                                piece.Row = 7;
+                                piece.Column = 6;
+
+                                chessBoard[7, 5] = RightRook;
+                                chessBoard[7, 6] = piece;
+
+                                //if (IsKingInCheck(piece.Color))
+                                //    MessageBox.Show("Şah Oluyor");
+
+                                rookSquare.Child = null;
+                                pieceSquare.Child = null;
+
+                                squareTarget1.Child = rookImage;
+                                squareTarget2.Child = kingImage;
+                            }
+                        }
+                        else
+                            return;
+                    }
+
+                    if (targetRow == 7 && targetColumn == 2)
+                    {
+                        Piece LeftRook = chessBoard[7, 0];
+
+                        if (LeftRook != null && LeftRook.DidFirstMove == false)
+                        {
+                            Piece target1 = chessBoard[7, 2];
+                            Piece target2 = chessBoard[7, 3];
+
+                            if (target1 == null && target2 == null)
+                            {
+                                chessBoard[7, 0] = null;
+                                chessBoard[piece.Row, piece.Column] = null;
+
+                                Border target1Square = ChessBoardUI.Children[7 * 8 + 2] as Border;
+                                Border target2Square = ChessBoardUI.Children[7 * 8 + 3] as Border;
+
+                                Border kingSquare = ChessBoardUI.Children[piece.Row * 8 + piece.Column] as Border;
+                                Border leftRookSquare = ChessBoardUI.Children[LeftRook.Row * 8 + LeftRook.Column] as Border;
+
+                                Image kingImage = kingSquare.Child as Image;
+                                Image leftRookImage = leftRookSquare.Child as Image;
+
+                                target1 = piece;
+                                target2 = LeftRook;
+
+                                LeftRook.DidFirstMove = true;
+                                LeftRook.Row = 7;
+                                LeftRook.Column = 3;
+
+                                chessBoard[7, 3] = LeftRook;
+
+                                piece.DidFirstMove = true;
+                                piece.Row = 7;
+                                piece.Column = 2;
+
+                                chessBoard[7, 2] = piece;
+
+                                kingSquare.Child = null;
+                                leftRookSquare.Child = null;
+
+                                target1Square.Child = kingImage;
+                                target2Square.Child = leftRookImage;
+
+                            }
+                            else
+                                return;
+                            // matristeki orijinal yerlerini sil
+                            // yeni yerleri o matrislere yerleştir
+
+                            // UI'ları bul ve al.
+                            // UI'ları sıfırla
+
+                        }
+                        else
+                            return;
+
+                    }
+                }
+                if (PieceColor.Black == piece.Color)
+                {
+                    if (targetRow == 0 && targetColumn == 6)
+                    {
+                        int pieceIndex = piece.Row * 8 + piece.Column;
+
+                        Piece RightRook = chessBoard[0, 7];
+
+                        if (RightRook != null && RightRook.DidFirstMove == false)
+                        {
+                            int rookIndex = RightRook.Row * 8 + RightRook.Column;
+
+                            Border rookSquare = ChessBoardUI.Children[rookIndex] as Border;
+                            Border pieceSquare = ChessBoardUI.Children[pieceIndex] as Border;
+
+                            Piece targetPiece1 = chessBoard[0, 5];
+                            Piece targetPiece2 = chessBoard[0, 6];
+
+                            if (targetPiece1 == null && targetPiece2 == null)
+                            {
+                                int target1Index = 0 * 8 + 5;
+                                int target2Index = 0 * 8 + 6;
+
+                                Border squareTarget1 = ChessBoardUI.Children[target1Index] as Border;
+                                Border squareTarget2 = ChessBoardUI.Children[target2Index] as Border;
+
+                                Image rookImage = rookSquare.Child as Image;
+                                Image kingImage = pieceSquare.Child as Image;
+
+                                chessBoard[0, 7] = null;
+                                chessBoard[0, 4] = null;
+
+                                RightRook.Row = 0;
+                                RightRook.Column = 5;
+                                RightRook.DidFirstMove = true;
+
+                                piece.Row = 0;
+                                piece.Column = 6;
+
+                                chessBoard[0, 5] = RightRook;
+                                chessBoard[0, 6] = piece;
+
+                                rookSquare.Child = null;
+                                pieceSquare.Child = null;
+
+                                squareTarget1.Child = rookImage;
+                                squareTarget2.Child = kingImage;
+                            }
+                            else
+                                return;
+                        }
+                    }
+                    if (targetRow == 0 && targetColumn == 2)
+                    {
+                        Piece LeftRook = chessBoard[0, 0];
+
+                        if (LeftRook != null && LeftRook.DidFirstMove == false)
+                        {
+                            Piece targetPiece1 = chessBoard[0, 1]; // B8
+                            Piece targetPiece2 = chessBoard[0, 2]; // C8
+                            Piece targetPiece3 = chessBoard[0, 3]; // D8
+
+                            if (targetPiece1 == null && targetPiece2 == null && targetPiece3 == null)
+                            {
+                                int pieceIndex = piece.Row * 8 + piece.Column;
+                                int rookIndex = LeftRook.Row * 8 + LeftRook.Column;
+
+                                Border kingSquare = ChessBoardUI.Children[pieceIndex] as Border;
+                                Border leftRookSquare = ChessBoardUI.Children[rookIndex] as Border;
+
+                                Border kingTargetSquare = ChessBoardUI.Children[0 * 8 + 2] as Border;
+                                Border rookTargetSquare = ChessBoardUI.Children[0 * 8 + 3] as Border;
+
+                                Image kingImage = kingSquare.Child as Image;
+                                Image leftRookImage = leftRookSquare.Child as Image;
+
+                                chessBoard[0, 0] = null;
+                                chessBoard[0, 4] = null;
+
+                                LeftRook.Row = 0;
+                                LeftRook.Column = 3;
+                                LeftRook.DidFirstMove = true;
+
+                                piece.Row = 0;
+                                piece.Column = 2;
+                                piece.DidFirstMove = true;
+
+                                chessBoard[0, 2] = piece;
+                                chessBoard[0, 3] = LeftRook;
+
+                                kingSquare.Child = null;
+                                leftRookSquare.Child = null;
+
+                                kingTargetSquare.Child = kingImage;
+                                rookTargetSquare.Child = leftRookImage;
+                            }
+                        }
+                        else
+                            return;
+                    }
+                }
+            }
+        }
+
+        private bool CanCastling(Piece kingPiece, int row, int column)
+        {
+            PieceColor enemyColor;
+
+            if (kingPiece.Color == PieceColor.White)
+                enemyColor = PieceColor.Black;
+            else
+                enemyColor = PieceColor.White;
+
+            // --------------------------------------------------
+            // ROOK / QUEEN - YUKARI
+
+            for (int targetRow = row - 1; targetRow >= 0; targetRow--)
+            {
+                Piece targetPiece = chessBoard[targetRow, column];
+
+                if (targetPiece == null)
+                    continue;
+
+                if (targetPiece.Color == enemyColor && (targetPiece.Type == PieceType.Rook || targetPiece.Type == PieceType.Queen))
+                    return false;
+
+                break;
+            }
+
+            // --------------------------------------------------
+            // ROOK / QUEEN - AŞAĞI
+
+            for (int targetRow = row + 1; targetRow <= 7; targetRow++)
+            {
+                Piece targetPiece = chessBoard[targetRow, column];
+
+                if (targetPiece == null)
+                    continue;
+
+                if (targetPiece.Color == enemyColor && (targetPiece.Type == PieceType.Rook || targetPiece.Type == PieceType.Queen))
+                    return false;
+
+                break;
+            }
+
+            // --------------------------------------------------
+            // ROOK / QUEEN - SOL
+
+            for (int targetColumn = column - 1; targetColumn >= 0; targetColumn--)
+            {
+                Piece targetPiece = chessBoard[row, targetColumn];
+
+                if (targetPiece == null)
+                    continue;
+
+                if (targetPiece.Color == enemyColor && (targetPiece.Type == PieceType.Rook || targetPiece.Type == PieceType.Queen))
+                    return false;
+
+                break;
+            }
+
+            // --------------------------------------------------
+            // ROOK / QUEEN - SAĞ
+
+            for (int targetColumn = column + 1; targetColumn <= 7; targetColumn++)
+            {
+                Piece targetPiece = chessBoard[row, targetColumn];
+
+                if (targetPiece == null)
+                    continue;
+
+                if (targetPiece.Color == enemyColor && (targetPiece.Type == PieceType.Rook || targetPiece.Type == PieceType.Queen))
+                    return false;
+
+                break;
+            }
+
+            // --------------------------------------------------
+            // BISHOP / QUEEN - SOL ÜST
+
+            int targetLeftColumnControl = column - 1;
+            for (int targetRow = row - 1; targetRow >= 0 && targetLeftColumnControl >= 0; targetRow--)
+            {
+                Piece targetPiece = chessBoard[targetRow, targetLeftColumnControl];
+
+                if (targetPiece == null)
+                {
+                    targetLeftColumnControl--;
+                    continue;
+                }
+
+                if (targetPiece.Color == enemyColor && (targetPiece.Type == PieceType.Bishop || targetPiece.Type == PieceType.Queen))
+                    return false;
+
+                break;
+            }
+
+            // --------------------------------------------------
+            // BISHOP / QUEEN - SAĞ ÜST
+
+            int targetRightColumnControl = column + 1;
+            for (int targetRow = row - 1; targetRow >= 0 && targetRightColumnControl <= 7; targetRow--)
+            {
+                Piece targetPiece = chessBoard[targetRow, targetRightColumnControl];
+
+                if (targetPiece == null)
+                {
+                    targetRightColumnControl++;
+                    continue;
+                }
+
+                if (targetPiece.Color == enemyColor && (targetPiece.Type == PieceType.Bishop || targetPiece.Type == PieceType.Queen))
+                    return false;
+
+                break;
+            }
+
+            // --------------------------------------------------
+            // BISHOP / QUEEN - SOL ALT
+
+            targetLeftColumnControl = column - 1;
+            for (int targetRow = row + 1; targetRow <= 7 && targetLeftColumnControl >= 0; targetRow++)
+            {
+                Piece targetPiece = chessBoard[targetRow, targetLeftColumnControl];
+
+                if (targetPiece == null)
+                {
+                    targetLeftColumnControl--;
+                    continue;
+                }
+
+                if (targetPiece.Color == enemyColor && (targetPiece.Type == PieceType.Bishop || targetPiece.Type == PieceType.Queen))
+                    return false;
+
+                break;
+            }
+
+            // --------------------------------------------------
+            // BISHOP / QUEEN - SAĞ ALT
+
+            targetRightColumnControl = column + 1;
+            for (int targetRow = row + 1; targetRow <= 7 && targetRightColumnControl <= 7; targetRow++)
+            {
+                Piece targetPiece = chessBoard[targetRow, targetRightColumnControl];
+
+                if (targetPiece == null)
+                {
+                    targetRightColumnControl++;
+                    continue;
+                }
+
+                if (targetPiece.Color == enemyColor && (targetPiece.Type == PieceType.Bishop || targetPiece.Type == PieceType.Queen))
+                    return false;
+
+                break;
+            }
+
+            // --------------------------------------------------
+            // PAWN
+
+            if (enemyColor == PieceColor.Black)
+            {
+                int pawnRow = row - 1;
+
+                if (pawnRow >= 0)
+                {
+                    int leftColumn = column - 1;
+                    int rightColumn = column + 1;
+
+                    if (leftColumn >= 0)
+                    {
+                        Piece targetPiece = chessBoard[pawnRow, leftColumn];
+
+                        if (targetPiece != null && targetPiece.Color == enemyColor && targetPiece.Type == PieceType.Pawn)
+                            return false;
+                    }
+
+                    if (rightColumn <= 7)
+                    {
+                        Piece targetPiece = chessBoard[pawnRow, rightColumn];
+
+                        if (targetPiece != null && targetPiece.Color == enemyColor && targetPiece.Type == PieceType.Pawn)
+                            return false;
+                    }
+                }
+            }
+            else
+            {
+                int pawnRow = row + 1;
+
+                if (pawnRow <= 7)
+                {
+                    int leftColumn = column - 1;
+                    int rightColumn = column + 1;
+
+                    if (leftColumn >= 0)
+                    {
+                        Piece targetPiece = chessBoard[pawnRow, leftColumn];
+
+                        if (targetPiece != null && targetPiece.Color == enemyColor && targetPiece.Type == PieceType.Pawn)
+                            return false;
+                    }
+
+                    if (rightColumn <= 7)
+                    {
+                        Piece targetPiece = chessBoard[pawnRow, rightColumn];
+
+                        if (targetPiece != null && targetPiece.Color == enemyColor && targetPiece.Type == PieceType.Pawn)
+                            return false;
+                    }
+                }
+            }
+
+            // --------------------------------------------------
+            // KNIGHT için
+
+            int[,] knightMoves =
+            {
+                    { -2, -1 },
+                    { -2,  1 },
+                    { -1, -2 },
+                    { -1,  2 },
+                    {  1, -2 },
+                    {  1,  2 },
+                    {  2, -1 },
+                    {  2,  1 }
+            };
+
+            for (int i = 0; i < knightMoves.GetLength(0); i++)
+            {
+                int targetRow = row + knightMoves[i, 0];
+                int targetColumn = column + knightMoves[i, 1];
+
+                if (targetRow >= 0 && targetRow <= 7 && targetColumn >= 0 && targetColumn <= 7)
+                {
+                    Piece targetPiece = chessBoard[targetRow, targetColumn];
+
+                    if (targetPiece != null && targetPiece.Color == enemyColor && targetPiece.Type == PieceType.Knight)
+                        return false;
+                }
+            }
+
+            // --------------------------------------------------
+            // --------------------------------------------------
+            // KING için
+
+            int[,] kingMoves =
+            {
+                    { -1, -1 },
+                    { -1,  0 },
+                    { -1,  1 },
+                    {  0, -1 },
+                    {  0,  1 },
+                    {  1, -1 },
+                    {  1,  0 },
+                    {  1,  1 }
+            };
+            for (int i = 0; i < kingMoves.GetLength(0); i++)
+            {
+                int targetRow = row + kingMoves[i, 0];
+                int targetColumn = column + kingMoves[i, 1];
+
+                if (targetRow >= 0 && targetRow <= 7 && targetColumn >= 0 && targetColumn <= 7)
+                {
+                    Piece targetPiece = chessBoard[targetRow, targetColumn];
+
+                    if (targetPiece != null && targetPiece.Color == enemyColor && targetPiece.Type == PieceType.King)
+                        return false;
+                }
+            }
+            return true;
+
+            // --------------------------------------------------
+        }
 
     }
 }
@@ -1856,3 +2374,4 @@ namespace ChessGame2
 // 1. Ses eklenecek
 // 2. Yediğimiz taşlar bizim isimlerin yanında gözükecek
 // Yenen taraf için sevinç müziği olsun, yenilen taraf için ise üzgün müzik çalsın
+// ŞAH olduğunda CASTLING işlemi olmamalı

@@ -36,11 +36,13 @@
                     <RowDefinition Height="30"></RowDefinition>
                 </Grid.RowDefinitions>
                 <Border Grid.Row="0" x:Name="QueenImage">
+                    <!--
                     <Image>
-                        <Image.Source>
-                            <BitmapImage DecodePixelWidth="200" UriSource="C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Whites\Chess_qlt60.png" />
-                        </Image.Source>
-                    </Image>
+    <Image.Source>
+        <BitmapImage DecodePixelWidth="200" UriSource="C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Whites\Chess_qlt60.png" />
+    </Image.Source>
+</Image>
+                    -->
                 </Border>
                 <Label Grid.Row="1" Content="Queen" FontSize="17" VerticalAlignment="Center" HorizontalAlignment="Center" FontWeight="Bold"></Label>
             </Grid>
