@@ -2,13 +2,18 @@
 using ChessGame2.Models;
 using System;
 using System.Collections.Generic;
+using System.Data.Common;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace ChessGame2
 {
@@ -30,12 +35,25 @@ namespace ChessGame2
         bool canCastling = true;
 
 
-        public MainWindow()
+        string playerName;
+
+        public MainWindow(string playerName)
         {
             InitializeComponent();
 
+            this.playerName = playerName;
+
+            UserNameControl();
             CreateChessBoard();
             SetChessPiece();
+
+            TcpClient client = new TcpClient();
+            client.Connect("127.0.0.1", 5000);
+        }
+
+        public void UserNameControl()
+        {
+            MyName.Content = playerName;
         }
 
         private void CreateChessBoard()
@@ -1327,6 +1345,12 @@ namespace ChessGame2
                 LegalMoves.Clear();
                 ResetAllColors();
                 ChangeTurn();
+
+                if (Checkmate(currentTurn))
+                {
+                    CheckMateForm checkMate = new CheckMateForm();
+                    checkMate.ShowDialog();
+                }
             }
         }
 
@@ -2366,6 +2390,315 @@ namespace ChessGame2
             return true;
 
             // --------------------------------------------------
+        }
+
+        private List<(int Row, int Column)> GetLegalMoves(Piece piece)
+        {
+            List<(int Row, int Column)> moves = new List<(int Row, int Column)>();
+
+            if (piece.Type == PieceType.Pawn)
+            {
+                if (piece.Color == PieceColor.White)
+                {
+                    int upperRow = piece.Row - 1;
+
+                    if (upperRow >= 0 && chessBoard[upperRow, piece.Column] == null)
+                    {
+                        moves.Add((upperRow, piece.Column));
+
+                        int upperUpperRow = piece.Row - 2;
+
+                        if (piece.DidFirstMove == false && upperUpperRow >= 0 && chessBoard[upperUpperRow, piece.Column] == null)
+                            moves.Add((upperUpperRow, piece.Column));
+                    }
+
+                    int upperLeftColumn = piece.Column - 1;
+                    int upperRightColumn = piece.Column + 1;
+
+                    if (upperRow >= 0 && upperLeftColumn >= 0)
+                    {
+                        Piece targetPiece = chessBoard[upperRow, upperLeftColumn];
+
+                        if (targetPiece != null && targetPiece.Color != piece.Color)
+                            moves.Add((upperRow, upperLeftColumn));
+                    }
+
+                    if (upperRow >= 0 && upperRightColumn <= 7)
+                    {
+                        Piece targetPiece = chessBoard[upperRow, upperRightColumn];
+
+                        if (targetPiece != null && targetPiece.Color != piece.Color)
+                            moves.Add((upperRow, upperRightColumn));
+                    }
+                }
+                else
+                {
+                    int lowerRow = piece.Row + 1;
+
+                    if (lowerRow <= 7 && chessBoard[lowerRow, piece.Column] == null)
+                    {
+                        moves.Add((lowerRow, piece.Column));
+
+                        int lowerLowerRow = piece.Row + 2;
+
+                        if (piece.DidFirstMove == false && lowerLowerRow <= 7 && chessBoard[lowerLowerRow, piece.Column] == null)
+                            moves.Add((lowerLowerRow, piece.Column));
+                    }
+
+                    int lowerLeftColumn = piece.Column - 1;
+                    int lowerRightColumn = piece.Column + 1;
+
+                    if (lowerRow <= 7 && lowerLeftColumn >= 0)
+                    {
+                        Piece targetPiece = chessBoard[lowerRow, lowerLeftColumn];
+
+                        if (targetPiece != null && targetPiece.Color != piece.Color)
+                            moves.Add((lowerRow, lowerLeftColumn));
+                    }
+
+                    if (lowerRow <= 7 && lowerRightColumn <= 7)
+                    {
+                        Piece targetPiece = chessBoard[lowerRow, lowerRightColumn];
+
+                        if (targetPiece != null && targetPiece.Color != piece.Color)
+                            moves.Add((lowerRow, lowerRightColumn));
+                    }
+                }
+            }
+
+            if (piece.Type == PieceType.Rook || piece.Type == PieceType.Queen)
+            {
+                for (int row = piece.Row - 1; row >= 0; row--)
+                {
+                    Piece targetPiece = chessBoard[row, piece.Column];
+
+                    if (targetPiece == null)
+                        moves.Add((row, piece.Column));
+                    else
+                    {
+                        if (targetPiece.Color != piece.Color)
+                            moves.Add((row, piece.Column));
+
+                        break;
+                    }
+                }
+
+                for (int row = piece.Row + 1; row <= 7; row++)
+                {
+                    Piece targetPiece = chessBoard[row, piece.Column];
+
+                    if (targetPiece == null)
+                        moves.Add((row, piece.Column));
+                    else
+                    {
+                        if (targetPiece.Color != piece.Color)
+                            moves.Add((row, piece.Column));
+
+                        break;
+                    }
+                }
+
+                for (int column = piece.Column - 1; column >= 0; column--)
+                {
+                    Piece targetPiece = chessBoard[piece.Row, column];
+
+                    if (targetPiece == null)
+                        moves.Add((piece.Row, column));
+                    else
+                    {
+                        if (targetPiece.Color != piece.Color)
+                            moves.Add((piece.Row, column));
+
+                        break;
+                    }
+                }
+
+                for (int column = piece.Column + 1; column <= 7; column++)
+                {
+                    Piece targetPiece = chessBoard[piece.Row, column];
+
+                    if (targetPiece == null)
+                        moves.Add((piece.Row, column));
+                    else
+                    {
+                        if (targetPiece.Color != piece.Color)
+                            moves.Add((piece.Row, column));
+
+                        break;
+                    }
+                }
+            }
+
+            if (piece.Type == PieceType.Bishop || piece.Type == PieceType.Queen)
+            {
+                for (int row = piece.Row - 1, column = piece.Column - 1; row >= 0 && column >= 0; row--, column--)
+                {
+                    Piece targetPiece = chessBoard[row, column];
+
+                    if (targetPiece == null)
+                        moves.Add((row, column));
+                    else
+                    {
+                        if (targetPiece.Color != piece.Color)
+                            moves.Add((row, column));
+
+                        break;
+                    }
+                }
+
+                for (int row = piece.Row - 1, column = piece.Column + 1; row >= 0 && column <= 7; row--, column++)
+                {
+                    Piece targetPiece = chessBoard[row, column];
+
+                    if (targetPiece == null)
+                        moves.Add((row, column));
+                    else
+                    {
+                        if (targetPiece.Color != piece.Color)
+                            moves.Add((row, column));
+
+                        break;
+                    }
+                }
+
+                for (int row = piece.Row + 1, column = piece.Column - 1; row <= 7 && column >= 0; row++, column--)
+                {
+                    Piece targetPiece = chessBoard[row, column];
+
+                    if (targetPiece == null)
+                        moves.Add((row, column));
+                    else
+                    {
+                        if (targetPiece.Color != piece.Color)
+                            moves.Add((row, column));
+
+                        break;
+                    }
+                }
+
+                for (int row = piece.Row + 1, column = piece.Column + 1; row <= 7 && column <= 7; row++, column++)
+                {
+                    Piece targetPiece = chessBoard[row, column];
+
+                    if (targetPiece == null)
+                        moves.Add((row, column));
+                    else
+                    {
+                        if (targetPiece.Color != piece.Color)
+                            moves.Add((row, column));
+
+                        break;
+                    }
+                }
+            }
+
+            if (piece.Type == PieceType.Knight)
+            {
+                int[,] knightMoves =
+                {
+            { -2, -1 }, { -2, 1 },
+            { -1, -2 }, { -1, 2 },
+            { 1, -2 }, { 1, 2 },
+            { 2, -1 }, { 2, 1 }
+        };
+
+                for (int i = 0; i < 8; i++)
+                {
+                    int targetRow = piece.Row + knightMoves[i, 0];
+                    int targetColumn = piece.Column + knightMoves[i, 1];
+
+                    if (targetRow >= 0 && targetRow <= 7 && targetColumn >= 0 && targetColumn <= 7)
+                    {
+                        Piece targetPiece = chessBoard[targetRow, targetColumn];
+
+                        if (targetPiece == null || targetPiece.Color != piece.Color)
+                            moves.Add((targetRow, targetColumn));
+                    }
+                }
+            }
+
+            if (piece.Type == PieceType.King)
+            {
+                for (int rowDifference = -1; rowDifference <= 1; rowDifference++)
+                {
+                    for (int columnDifference = -1; columnDifference <= 1; columnDifference++)
+                    {
+                        if (rowDifference == 0 && columnDifference == 0)
+                            continue;
+
+                        int targetRow = piece.Row + rowDifference;
+                        int targetColumn = piece.Column + columnDifference;
+
+                        if (targetRow >= 0 && targetRow <= 7 && targetColumn >= 0 && targetColumn <= 7)
+                        {
+                            Piece targetPiece = chessBoard[targetRow, targetColumn];
+
+                            if (targetPiece == null || targetPiece.Color != piece.Color)
+                                moves.Add((targetRow, targetColumn));
+                        }
+                    }
+                }
+            }
+
+            return moves;
+        }
+
+        private bool HasAnyLegalMove(PieceColor color)
+        {
+            for (int row = 0; row < 8; row++)
+            {
+                for (int column = 0; column < 8; column++)
+                {
+                    Piece piece = chessBoard[row, column];
+
+                    if (piece != null && piece.Color == color)
+                    {
+                        List<(int Row, int Column)> moves = GetLegalMoves(piece);
+
+                        for (int i = 0; i < moves.Count; i++)
+                        {
+                            (int targetRow, int targetColumn) = moves[i];
+
+                            if (MoveLeavesKingInCheck(piece, targetRow, targetColumn) == false)
+                                return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private bool Checkmate(PieceColor color)
+        {
+            if (IsKingInCheck(color) == false)
+                return false;
+
+            if (HasAnyLegalMove(color))
+                return false;
+
+            return true;
+        }
+
+        private void SendUsername(string username, TcpClient client)
+        {
+            JObject jsonObj = new JObject();
+            jsonObj["Type"] = "Username";
+            jsonObj["Data"] = username;
+
+            string json = jsonObj.ToString();
+
+            byte[] jsonByteArr = Encoding.UTF8.GetBytes(json);
+
+            NetworkStream stream = client.GetStream();
+            stream.Write(jsonByteArr, 0, jsonByteArr.Length);
+
+            //string json = JsonConvert.SerializeObject(username);
+            //byte[] jsonByteArr = Encoding.UTF8.GetBytes(json);
+
+            //NetworkStream stream = client.GetStream();
+            //stream.Write(jsonByteArr, 0, jsonByteArr.Length);
+            
         }
 
     }
