@@ -6,7 +6,7 @@
         xmlns:local="clr-namespace:ChessGame2"
         mc:Ignorable="d"
         Title="Chess Game" Height="780" Width="1100" MinWidth="1000" MinHeight="750"
-        WindowState="Maximized">
+        WindowState="Maximized" Loaded="Window_Loaded">
     <Grid>
 
         <Grid.ColumnDefinitions>

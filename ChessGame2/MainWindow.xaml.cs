@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 
 namespace ChessGame2
 {
@@ -25,17 +26,17 @@ namespace ChessGame2
         Piece selectedPiece;
 
         PieceColor currentTurn = PieceColor.White;
+        PieceColor playerColor;
 
         PieceImages pieceImages = new PieceImages();
 
         List<(int Row, int Column)> LegalMoves = new List<(int Row, int Column)>();
 
-        BitmapImage bitmap;
-
-        bool canCastling = true;
-
-
         string playerName;
+        string enemyName;
+
+        TcpClient client;
+        NetworkStream stream;
 
         public MainWindow(string playerName)
         {
@@ -46,9 +47,6 @@ namespace ChessGame2
             UserNameControl();
             CreateChessBoard();
             SetChessPiece();
-
-            TcpClient client = new TcpClient();
-            client.Connect("127.0.0.1", 5000);
         }
 
         public void UserNameControl()
@@ -262,7 +260,7 @@ namespace ChessGame2
             }
         }
 
-        private void square_Click(object sender, MouseButtonEventArgs e)
+        private async void square_Click(object sender, MouseButtonEventArgs e)
         {
             Border clickedSquare = sender as Border;
 
@@ -270,7 +268,7 @@ namespace ChessGame2
 
             if (selectedPiece != null && LegalMoves.Contains((row, column)))
             {
-                MovePiece(sender, selectedPiece);
+                await MovePiece(sender, selectedPiece);
 
                 selectedPiece = null;
                 oldSquare = null;
@@ -300,7 +298,16 @@ namespace ChessGame2
                 return;
             }
 
-            if (clickedPiece.Color != currentTurn)
+            if (currentTurn != playerColor)
+            {
+                oldSquare = null;
+                selectedPiece = null;
+                LegalMoves.Clear();
+
+                return;
+            }
+
+            if (clickedPiece.Color != playerColor)
             {
                 oldSquare = null;
                 selectedPiece = null;
@@ -1283,9 +1290,12 @@ namespace ChessGame2
             }
         }
 
-        private void MovePiece(object sender, Piece piece)
+        private async Task MovePiece(object sender, Piece piece)
         {
             Border clickedSquare = sender as Border;
+
+            int oldRow = piece.Row;
+            int oldColumn = piece.Column;
 
             var (row, column) = ((int, int))clickedSquare.Tag;
 
@@ -1301,8 +1311,7 @@ namespace ChessGame2
 
                 if (isCastling)
                 {
-                    // Burada şah çekildiğini kontrol ettirip eğer fonksiyon RETURN dönerse ChangeTurn olmaması lazım.
-                    if (IsKingInCheck(piece.Color) == false)
+                    if (IsKingInCheck(piece.Color) == false) // CASTLING İŞLEMİ İÇİN AYRI BİR THREAD TANIMLA
                     {
                         Castling(piece, row, column);
 
@@ -1337,6 +1346,12 @@ namespace ChessGame2
 
                 chessBoard[row, column] = piece;
                 newPieceSquare.Child = pieceImage;
+
+                // = = = = = = =
+
+                await SendMoveData(client, playerName, enemyName, piece.Type, oldRow, oldColumn, row, column);
+
+                // = = = = = = =
 
                 PawnUpgrade(piece, row, column);
 
@@ -2680,9 +2695,12 @@ namespace ChessGame2
             return true;
         }
 
-        private void SendUsername(string username, TcpClient client)
+        private async Task SendUsername(string username, TcpClient client)
         {
+            //MessageBox.Show("SendUsername başladı: " + username);
+
             JObject jsonObj = new JObject();
+
             jsonObj["Type"] = "Username";
             jsonObj["Data"] = username;
 
@@ -2691,20 +2709,361 @@ namespace ChessGame2
             byte[] jsonByteArr = Encoding.UTF8.GetBytes(json);
 
             NetworkStream stream = client.GetStream();
-            stream.Write(jsonByteArr, 0, jsonByteArr.Length);
 
-            //string json = JsonConvert.SerializeObject(username);
-            //byte[] jsonByteArr = Encoding.UTF8.GetBytes(json);
+            await stream.WriteAsync(jsonByteArr, 0, jsonByteArr.Length);
 
-            //NetworkStream stream = client.GetStream();
-            //stream.Write(jsonByteArr, 0, jsonByteArr.Length);
-            
+        }
+
+        private void ChangeUIForBlackPiece()
+        {
+            ChessBoardUI.LayoutTransform = new RotateTransform(180);
+
+            foreach (Border square in ChessBoardUI.Children)
+            {
+                if (square.Child is Image image)
+                {
+                    image.RenderTransformOrigin = new Point(0.5, 0.5);
+                    image.RenderTransform = new RotateTransform(180);
+                }
+            }
+        }
+
+        private async void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            client = new TcpClient();
+
+            await client.ConnectAsync("127.0.0.1", 5000);
+
+            stream = client.GetStream();
+
+            await SendUsername(playerName, client);
+
+            await ListenServer();
+        }
+
+        //private async Task ReadColorMessage(NetworkStream stream) // Çünkü async bir metodun tamamlanmasını takip edebilmek istiyoruz.
+        //{
+        //    byte[] buffer = new byte[1024];
+
+        //    int byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
+
+        //    string message = Encoding.UTF8.GetString(buffer, 0, byteCount);
+
+        //    JObject jsonObj = JObject.Parse(message);
+
+        //    string type = jsonObj["Type"].ToString();
+        //    string data = jsonObj["Data"].ToString();
+
+        //    if (type == "Color")
+        //    {
+        //        if (data == "White")
+        //        {
+        //            return;
+        //        }
+        //        else if (data == "Black")
+        //        {
+        //            ChangeUIForBlackPiece();
+        //        }
+        //    }
+        //}
+
+        //public async Task<string> ReadEnemyName(NetworkStream stream)
+        //{
+        //    byte[] buffer = new byte[1024];
+
+        //    int byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
+
+        //    string message = Encoding.UTF8.GetString(buffer, 0, byteCount);
+
+        //    JObject json = JObject.Parse(message);
+
+        //    string type = json["Type"].ToString();
+        //    string enemyName = json["Data"].ToString();
+
+        //    return enemyName;
+        //}
+
+        private async Task ListenServer()
+        {
+            byte[] buffer = new byte[1024];
+
+            while (true)
+            {
+                int byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
+
+                if (byteCount == 0)
+                    break;
+
+                string message = Encoding.UTF8.GetString(buffer, 0, byteCount);
+
+                JObject json = JObject.Parse(message);
+
+                string type = json["Type"].ToString();
+
+                if (type == "Color")
+                {
+                    string color = json["Data"].ToString();
+
+                    if (color == "White")
+                    {
+                        playerColor = PieceColor.White;
+                    }
+                    else if (color == "Black")
+                    {
+                        playerColor = PieceColor.Black;
+
+                        ChangeUIForBlackPiece();
+                    }
+                }
+                else if (type == "EnemyName")
+                {
+                    enemyName = json["Data"].ToString();
+
+                    EnemyName.Content = enemyName;
+                }
+                else if (type == "PieceMove")
+                {
+                    string pieceName = json["Piece"].ToString();
+
+                    int fromRow = (int)json["FromRow"];
+                    int fromColumn = (int)json["FromColumn"];
+
+                    int toRow = (int)json["ToRow"];
+                    int toColumn = (int)json["ToColumn"];
+
+                    Piece piece = chessBoard[fromRow, fromColumn];
+
+                    if (piece == null)
+                    {
+                        MessageBox.Show("Gönderilen başlangıç karesinde taş bulunamadı.");
+                        continue;
+                    }
+
+                    if (piece.Type.ToString() == pieceName)
+                    {
+                        bool isCastling = piece.Type == PieceType.King && Math.Abs(toColumn - piece.Column) == 2;
+
+                        if (isCastling)
+                        {
+                            CastlingMessage(piece, toRow, toColumn);
+                        }
+                        else
+                        {
+                            MovePieceMessage(piece, toRow, toColumn);
+                        }
+
+                        ChangeTurn();
+                    }
+                    else
+                    {
+                        MessageBox.Show("Tür Eşleşmedi");
+                    }
+                }
+            }
+        }
+
+        private void MovePieceMessage(Piece piece, int targetRow, int targetColumn)
+        {
+            int oldIndex = piece.Row * 8 + piece.Column;
+
+            Border square = ChessBoardUI.Children[oldIndex] as Border;
+
+            int targetIndex = targetRow * 8 + targetColumn;
+
+            Border targetSquare = ChessBoardUI.Children[targetIndex] as Border;
+
+            Piece targetPiece = chessBoard[targetRow, targetColumn];
+
+            if (targetPiece != null)
+                targetPiece.IsEaten = true;
+
+            Image image = square.Child as Image;
+
+            square.Child = null;
+
+            targetSquare.Child = image;
+
+            chessBoard[piece.Row, piece.Column] = null;
+
+            piece.Row = targetRow;
+            piece.Column = targetColumn;
+
+            piece.DidFirstMove = true;
+
+            chessBoard[targetRow, targetColumn] = piece;
+
+            ResetAllColors();
+        }
+
+        private async Task SendMoveData(TcpClient client, string username, string enemyname, PieceType pieceType, int oldRow, int oldColumn, int targetRow, int targetColumn)
+        {
+            JObject jsonObject = new JObject();
+
+            jsonObject["Type"] = "PieceMove";
+            jsonObject["User"] = username;
+            jsonObject["Piece"] = pieceType.ToString();
+
+            jsonObject["FromRow"] = oldRow;
+            jsonObject["FromColumn"] = oldColumn;
+
+            jsonObject["ToRow"] = targetRow;
+            jsonObject["ToColumn"] = targetColumn;
+
+            jsonObject["ToEnemy"] = enemyname;
+
+            byte[] jsonByteArr = Encoding.UTF8.GetBytes(jsonObject.ToString());
+
+            NetworkStream stream = client.GetStream();
+
+            await stream.WriteAsync(jsonByteArr, 0, jsonByteArr.Length);
+        }
+
+
+        private void CastlingMessage(Piece piece, int targetRow, int targetColumn)
+        {
+            if (piece.Color == PieceColor.White)
+            {
+                if (targetRow == 7 && targetColumn == 2)
+                {
+                    // Beyaz uzun rok
+                    Piece rook = chessBoard[7, 0];
+
+                    Border rookSquare = ChessBoardUI.Children[rook.Row * 8 + rook.Column] as Border;
+                    Border kingSquare = ChessBoardUI.Children[piece.Row * 8 + piece.Column] as Border;
+
+                    Image rookImage = rookSquare.Child as Image;
+                    Image kingImage = kingSquare.Child as Image;
+
+                    rookSquare.Child = null;
+                    kingSquare.Child = null;
+
+                    Border rookNewSquare = ChessBoardUI.Children[7 * 8 + 3] as Border;
+                    Border kingNewSquare = ChessBoardUI.Children[7 * 8 + 2] as Border;
+
+                    rookNewSquare.Child = rookImage;
+                    kingNewSquare.Child = kingImage;
+
+                    chessBoard[7, 0] = null;
+                    chessBoard[piece.Row, piece.Column] = null;
+
+                    rook.Row = 7;
+                    rook.Column = 3;
+                    rook.DidFirstMove = true;
+
+                    piece.Row = 7;
+                    piece.Column = 2;
+                    piece.DidFirstMove = true;
+
+                    chessBoard[7, 3] = rook;
+                    chessBoard[7, 2] = piece;
+                }
+                else if (targetRow == 7 && targetColumn == 6)
+                {
+                    // Beyaz kısa rok
+                    Piece rook = chessBoard[7, 7];
+
+                    Border rookSquare = ChessBoardUI.Children[rook.Row * 8 + rook.Column] as Border;
+                    Border kingSquare = ChessBoardUI.Children[piece.Row * 8 + piece.Column] as Border;
+
+                    Image rookImage = rookSquare.Child as Image;
+                    Image kingImage = kingSquare.Child as Image;
+
+                    rookSquare.Child = null;
+                    kingSquare.Child = null;
+
+                    Border rookNewSquare = ChessBoardUI.Children[7 * 8 + 5] as Border;
+                    Border kingNewSquare = ChessBoardUI.Children[7 * 8 + 6] as Border;
+
+                    rookNewSquare.Child = rookImage;
+                    kingNewSquare.Child = kingImage;
+
+                    chessBoard[7, 7] = null;
+                    chessBoard[piece.Row, piece.Column] = null;
+
+                    rook.Row = 7;
+                    rook.Column = 5;
+                    rook.DidFirstMove = true;
+
+                    piece.Row = 7;
+                    piece.Column = 6;
+                    piece.DidFirstMove = true;
+
+                    chessBoard[7, 5] = rook;
+                    chessBoard[7, 6] = piece;
+                }
+            }
+            else if (piece.Color == PieceColor.Black)
+            {
+                if (targetRow == 0 && targetColumn == 2)
+                {
+                    // Siyah uzun rok
+                    Piece rook = chessBoard[0, 0];
+
+                    Border rookSquare = ChessBoardUI.Children[rook.Row * 8 + rook.Column] as Border;
+                    Border kingSquare = ChessBoardUI.Children[piece.Row * 8 + piece.Column] as Border;
+
+                    Image rookImage = rookSquare.Child as Image;
+                    Image kingImage = kingSquare.Child as Image;
+
+                    rookSquare.Child = null;
+                    kingSquare.Child = null;
+
+                    Border rookNewSquare = ChessBoardUI.Children[0 * 8 + 3] as Border;
+                    Border kingNewSquare = ChessBoardUI.Children[0 * 8 + 2] as Border;
+
+                    rookNewSquare.Child = rookImage;
+                    kingNewSquare.Child = kingImage;
+
+                    chessBoard[0, 0] = null;
+                    chessBoard[piece.Row, piece.Column] = null;
+
+                    rook.Row = 0;
+                    rook.Column = 3;
+                    rook.DidFirstMove = true;
+
+                    piece.Row = 0;
+                    piece.Column = 2;
+                    piece.DidFirstMove = true;
+
+                    chessBoard[0, 3] = rook;
+                    chessBoard[0, 2] = piece;
+                }
+                else if (targetRow == 0 && targetColumn == 6)
+                {
+                    // Siyah kısa rok
+                    Piece rook = chessBoard[0, 7];
+
+                    Border rookSquare = ChessBoardUI.Children[rook.Row * 8 + rook.Column] as Border;
+                    Border kingSquare = ChessBoardUI.Children[piece.Row * 8 + piece.Column] as Border;
+
+                    Image rookImage = rookSquare.Child as Image;
+                    Image kingImage = kingSquare.Child as Image;
+
+                    rookSquare.Child = null;
+                    kingSquare.Child = null;
+
+                    Border rookNewSquare = ChessBoardUI.Children[0 * 8 + 5] as Border;
+                    Border kingNewSquare = ChessBoardUI.Children[0 * 8 + 6] as Border;
+
+                    rookNewSquare.Child = rookImage;
+                    kingNewSquare.Child = kingImage;
+
+                    chessBoard[0, 7] = null;
+                    chessBoard[piece.Row, piece.Column] = null;
+
+                    rook.Row = 0;
+                    rook.Column = 5;
+                    rook.DidFirstMove = true;
+
+                    piece.Row = 0;
+                    piece.Column = 6;
+                    piece.DidFirstMove = true;
+
+                    chessBoard[0, 5] = rook;
+                    chessBoard[0, 6] = piece;
+                }
+            }
         }
 
     }
 }
-// - - - - EKLENECEKLER - - - - 
-// 1. Ses eklenecek
-// 2. Yediğimiz taşlar bizim isimlerin yanında gözükecek
-// Yenen taraf için sevinç müziği olsun, yenilen taraf için ise üzgün müzik çalsın
-// ŞAH olduğunda CASTLING işlemi olmamalı
