@@ -15,6 +15,8 @@ using System.Windows.Media.Imaging;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Threading.Tasks;
+using System.IO;
+using System.Runtime.Remoting.Messaging;
 
 namespace ChessGame2
 {
@@ -37,12 +39,14 @@ namespace ChessGame2
 
         TcpClient client;
         NetworkStream stream;
+        string ipaddr;
 
-        public MainWindow(string playerName)
+        public MainWindow(string playerName, string ip)
         {
             InitializeComponent();
 
             this.playerName = playerName;
+            ipaddr = ip;
 
             UserNameControl();
             CreateChessBoard();
@@ -1311,11 +1315,11 @@ namespace ChessGame2
 
                 if (isCastling)
                 {
-                    if (IsKingInCheck(piece.Color) == false) // CASTLING İŞLEMİ İÇİN AYRI BİR THREAD TANIMLA
+                    if (IsKingInCheck(piece.Color) == false)
                     {
-                        Castling(piece, row, column);
+                        await SendMoveData(client, playerName, enemyName, piece.Type, oldRow, oldColumn, row, column);
 
-                        piece.DidFirstMove = true;
+                        ApplyCastling(piece, row, column);
 
                         LegalMoves.Clear();
                         ResetAllColors();
@@ -1353,7 +1357,7 @@ namespace ChessGame2
 
                 // = = = = = = =
 
-                PawnUpgrade(piece, row, column);
+                await PawnUpgrade(piece, row, column);
 
                 piece.DidFirstMove = true;
 
@@ -1820,98 +1824,117 @@ namespace ChessGame2
             return kingInCheck;
         }
 
-        private void PawnUpgrade(Piece piece, int targetRow, int targetColumn) // Yeni Ekledim
+        private async Task PawnUpgrade(Piece piece, int targetRow, int targetColumn)
         {
-            if (piece.Type == PieceType.Pawn)
+            if (piece.Type != PieceType.Pawn)
+                return;
+
+            bool canUpgrade = false;
+
+            if (piece.Color == PieceColor.White && targetRow == 0)
+                canUpgrade = true;
+            else if (piece.Color == PieceColor.Black && targetRow == 7)
+                canUpgrade = true;
+
+            if (canUpgrade == false)
+                return;
+
+            PieceSelectionForm form = new PieceSelectionForm(piece, targetRow, targetColumn);
+
+            if (form.ShowDialog() == true)
             {
-                if (piece.Color == PieceColor.White && targetRow == 0)
+                piece = form.piece;
+
+                ApplyPawnUpgrade(piece);
+
+                await SendPawnUpgradeData(piece);
+            }
+        }
+
+        private void ApplyPawnUpgrade(Piece piece)
+        {
+            int index = piece.Row * 8 + piece.Column;
+
+            Border square = ChessBoardUI.Children[index] as Border;
+
+            BitmapImage bitmap = null;
+
+            if (piece.Color == PieceColor.White)
+            {
+                switch (piece.Type)
                 {
-                    PieceSelectionForm form = new PieceSelectionForm(piece, targetRow, targetColumn);
+                    case PieceType.Rook:
+                        bitmap = new BitmapImage(pieceImages.RookWhiteImagePath);
+                        break;
 
-                    if (form.ShowDialog() == true)
-                    {
-                        piece = form.piece;
-                    }
+                    case PieceType.Knight:
+                        bitmap = new BitmapImage(pieceImages.KnightWhiteImagePath);
+                        break;
 
-                    int index = piece.Row * 8 + piece.Column;
-                    Border square = ChessBoardUI.Children[index] as Border;
+                    case PieceType.Bishop:
+                        bitmap = new BitmapImage(pieceImages.BishopWhiteImagePath);
+                        break;
 
-                    BitmapImage bitmap = null;
-
-                    switch (piece.Type)
-                    {
-                        case PieceType.Rook:
-                            bitmap = new BitmapImage(pieceImages.RookWhiteImagePath);
-                            break;
-
-                        case PieceType.Knight:
-                            bitmap = new BitmapImage(pieceImages.KnightWhiteImagePath);
-                            break;
-
-                        case PieceType.Bishop:
-                            bitmap = new BitmapImage(pieceImages.BishopWhiteImagePath);
-                            break;
-
-                        case PieceType.Queen:
-                            bitmap = new BitmapImage(pieceImages.QueenWhiteImagePath);
-                            break;
-                    }
-
-                    if (bitmap != null)
-                    {
-                        Image image = new Image();
-
-                        image.Source = bitmap;
-                        image.Stretch = Stretch.Uniform;
-                        image.IsHitTestVisible = false;
-
-                        square.Child = image;
-                    }
-                }
-                if (piece.Color == PieceColor.Black && targetRow == 7)
-                {
-                    PieceSelectionForm form = new PieceSelectionForm(piece, targetRow, targetColumn);
-
-                    if (form.ShowDialog() == true)
-                    {
-                        piece = form.piece;
-                    }
-
-                    int index = piece.Row * 8 + piece.Column;
-                    Border square = ChessBoardUI.Children[index] as Border;
-
-                    BitmapImage bitmap = null;
-
-                    switch (piece.Type)
-                    {
-                        case PieceType.Rook:
-                            bitmap = new BitmapImage(pieceImages.RookBlackImagePath);
-                            break;
-
-                        case PieceType.Knight:
-                            bitmap = new BitmapImage(pieceImages.KnightBlackImagePath);
-                            break;
-
-                        case PieceType.Bishop:
-                            bitmap = new BitmapImage(pieceImages.BishopBlackImagePath);
-                            break;
-
-                        case PieceType.Queen:
-                            bitmap = new BitmapImage(pieceImages.QueenBlackImagePath);
-                            break;
-                    }
-
-                    if (bitmap != null)
-                    {
-                        Image image = new Image();
-                        image.Source = bitmap;
-                        image.Stretch = Stretch.Uniform;
-                        image.IsHitTestVisible = false;
-
-                        square.Child = image;
-                    }
+                    case PieceType.Queen:
+                        bitmap = new BitmapImage(pieceImages.QueenWhiteImagePath);
+                        break;
                 }
             }
+            else if (piece.Color == PieceColor.Black)
+            {
+                switch (piece.Type)
+                {
+                    case PieceType.Rook:
+                        bitmap = new BitmapImage(pieceImages.RookBlackImagePath);
+                        break;
+
+                    case PieceType.Knight:
+                        bitmap = new BitmapImage(pieceImages.KnightBlackImagePath);
+                        break;
+
+                    case PieceType.Bishop:
+                        bitmap = new BitmapImage(pieceImages.BishopBlackImagePath);
+                        break;
+
+                    case PieceType.Queen:
+                        bitmap = new BitmapImage(pieceImages.QueenBlackImagePath);
+                        break;
+                }
+            }
+
+            if (bitmap != null)
+            {
+                Image image = new Image();
+
+                image.Source = bitmap;
+                image.Stretch = Stretch.Uniform;
+                image.IsHitTestVisible = false;
+
+                if (playerColor == PieceColor.Black)
+                {
+                    image.RenderTransformOrigin = new Point(0.5, 0.5);
+                    image.RenderTransform = new RotateTransform(180);
+                }
+
+                square.Child = image;
+            }
+        }
+
+        private async Task SendPawnUpgradeData(Piece piece)
+        {
+            JObject jsonObject = new JObject();
+
+            jsonObject["Type"] = "PawnUpgrade";
+            jsonObject["User"] = playerName;
+            jsonObject["Piece"] = piece.Type.ToString();
+            jsonObject["Row"] = piece.Row;
+            jsonObject["Column"] = piece.Column;
+
+            byte[] jsonByteArr = Encoding.UTF8.GetBytes(jsonObject.ToString(Formatting.None) + "\n");
+
+            NetworkStream stream = client.GetStream();
+
+            await stream.WriteAsync(jsonByteArr, 0, jsonByteArr.Length);
         }
 
         private void Castling(Piece piece, int targetRow, int targetColumn)
@@ -2697,21 +2720,18 @@ namespace ChessGame2
 
         private async Task SendUsername(string username, TcpClient client)
         {
-            //MessageBox.Show("SendUsername başladı: " + username);
-
             JObject jsonObj = new JObject();
 
             jsonObj["Type"] = "Username";
             jsonObj["Data"] = username;
 
-            string json = jsonObj.ToString();
+            string json = jsonObj.ToString(Formatting.None) + "\n";
 
             byte[] jsonByteArr = Encoding.UTF8.GetBytes(json);
 
             NetworkStream stream = client.GetStream();
 
             await stream.WriteAsync(jsonByteArr, 0, jsonByteArr.Length);
-
         }
 
         private void ChangeUIForBlackPiece()
@@ -2730,73 +2750,49 @@ namespace ChessGame2
 
         private async void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            client = new TcpClient();
+            try
+            {
+                client = new TcpClient();
 
-            await client.ConnectAsync("127.0.0.1", 5000);
+                //await client.ConnectAsync("127.0.0.1", 5000);
+                await client.ConnectAsync(ipaddr, 5000);
 
-            stream = client.GetStream();
+                stream = client.GetStream();
 
-            await SendUsername(playerName, client);
+                await SendUsername(playerName, client);
 
-            await ListenServer();
+                await ListenServer();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Sunucu bağlantısı kapandı: " + ex.Message);
+            }
         }
-
-        //private async Task ReadColorMessage(NetworkStream stream) // Çünkü async bir metodun tamamlanmasını takip edebilmek istiyoruz.
-        //{
-        //    byte[] buffer = new byte[1024];
-
-        //    int byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
-
-        //    string message = Encoding.UTF8.GetString(buffer, 0, byteCount);
-
-        //    JObject jsonObj = JObject.Parse(message);
-
-        //    string type = jsonObj["Type"].ToString();
-        //    string data = jsonObj["Data"].ToString();
-
-        //    if (type == "Color")
-        //    {
-        //        if (data == "White")
-        //        {
-        //            return;
-        //        }
-        //        else if (data == "Black")
-        //        {
-        //            ChangeUIForBlackPiece();
-        //        }
-        //    }
-        //}
-
-        //public async Task<string> ReadEnemyName(NetworkStream stream)
-        //{
-        //    byte[] buffer = new byte[1024];
-
-        //    int byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
-
-        //    string message = Encoding.UTF8.GetString(buffer, 0, byteCount);
-
-        //    JObject json = JObject.Parse(message);
-
-        //    string type = json["Type"].ToString();
-        //    string enemyName = json["Data"].ToString();
-
-        //    return enemyName;
-        //}
 
         private async Task ListenServer()
         {
-            byte[] buffer = new byte[1024];
+            StreamReader reader = new StreamReader(stream, Encoding.UTF8, false, 1024, true);
 
             while (true)
             {
-                int byteCount = await stream.ReadAsync(buffer, 0, buffer.Length);
+                string message = await reader.ReadLineAsync();
 
-                if (byteCount == 0)
+                if (message == null)
                     break;
 
-                string message = Encoding.UTF8.GetString(buffer, 0, byteCount);
+                if (string.IsNullOrWhiteSpace(message))
+                    continue;
 
-                JObject json = JObject.Parse(message);
+                JObject json;
+
+                try
+                {
+                    json = JObject.Parse(message);
+                }
+                catch (JsonException)
+                {
+                    continue;
+                }
 
                 string type = json["Type"].ToString();
 
@@ -2811,14 +2807,12 @@ namespace ChessGame2
                     else if (color == "Black")
                     {
                         playerColor = PieceColor.Black;
-
                         ChangeUIForBlackPiece();
                     }
                 }
                 else if (type == "EnemyName")
                 {
                     enemyName = json["Data"].ToString();
-
                     EnemyName.Content = enemyName;
                 }
                 else if (type == "PieceMove")
@@ -2827,7 +2821,6 @@ namespace ChessGame2
 
                     int fromRow = (int)json["FromRow"];
                     int fromColumn = (int)json["FromColumn"];
-
                     int toRow = (int)json["ToRow"];
                     int toColumn = (int)json["ToColumn"];
 
@@ -2841,16 +2834,12 @@ namespace ChessGame2
 
                     if (piece.Type.ToString() == pieceName)
                     {
-                        bool isCastling = piece.Type == PieceType.King && Math.Abs(toColumn - piece.Column) == 2;
+                        bool isCastling = piece.Type == PieceType.King && Math.Abs(toColumn - fromColumn) == 2;
 
                         if (isCastling)
-                        {
-                            CastlingMessage(piece, toRow, toColumn);
-                        }
+                            ApplyCastling(piece, toRow, toColumn);
                         else
-                        {
                             MovePieceMessage(piece, toRow, toColumn);
-                        }
 
                         ChangeTurn();
                     }
@@ -2858,6 +2847,36 @@ namespace ChessGame2
                     {
                         MessageBox.Show("Tür Eşleşmedi");
                     }
+                }
+                else if (type == "PawnUpgrade")
+                {
+                    string pieceName = json["Piece"].ToString();
+
+                    int row = (int)json["Row"];
+                    int column = (int)json["Column"];
+
+                    Piece piece = chessBoard[row, column];
+
+                    if (piece == null)
+                    {
+                        MessageBox.Show("Terfi edilecek taş bulunamadı.");
+                        continue;
+                    }
+
+                    if (Enum.TryParse(pieceName, out PieceType newPieceType))
+                    {
+                        piece.Type = newPieceType;
+                        ApplyPawnUpgrade(piece);
+                    }
+                    else
+                    {
+                        MessageBox.Show("Terfi taş türü okunamadı.");
+                    }
+                }
+                else if (type == "Message")
+                {
+                    string messageStr = GetMessage(json);
+                    MessageListBox.Items.Add($"{enemyName}: {messageStr}");
                 }
             }
         }
@@ -2911,7 +2930,7 @@ namespace ChessGame2
 
             jsonObject["ToEnemy"] = enemyname;
 
-            byte[] jsonByteArr = Encoding.UTF8.GetBytes(jsonObject.ToString());
+            byte[] jsonByteArr = Encoding.UTF8.GetBytes(jsonObject.ToString(Formatting.None) + "\n");
 
             NetworkStream stream = client.GetStream();
 
@@ -2919,7 +2938,7 @@ namespace ChessGame2
         }
 
 
-        private void CastlingMessage(Piece piece, int targetRow, int targetColumn)
+        private void ApplyCastling(Piece piece, int targetRow, int targetColumn)
         {
             if (piece.Color == PieceColor.White)
             {
@@ -3065,5 +3084,70 @@ namespace ChessGame2
             }
         }
 
+        private async Task<string> SendMessage(TcpClient client)
+        {
+            if (string.IsNullOrWhiteSpace(message_textBlock.Text))
+                return null;
+
+            string message = MyMessage.Text.Trim();
+
+            JObject json = new JObject();
+            json["Type"] = "Message";
+            json["Data"] = message;
+            json["User"] = playerName;
+
+            byte[] jsonByteArr = Encoding.UTF8.GetBytes(json.ToString(Formatting.None) + "\n");
+
+            NetworkStream stream = client.GetStream();
+
+            await stream.WriteAsync(jsonByteArr, 0, jsonByteArr.Length);
+
+            return message ;
+        }
+
+        private async void messageSend_button_Click(object sender, RoutedEventArgs e)
+        {
+            string message = await SendMessage(client);
+
+            if (message == null)
+                return;
+
+            MessageListBox.Items.Add($"{playerName}: {message}");
+            MyMessage.Text = null;
+        }
+
+        private string GetMessage(JObject json)
+        {
+            try
+            {
+                string messageStr = json["Data"]?.ToString();
+                return messageStr;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                return null;
+            }
+        }
+
+        private void EmojiHappy_Click(object sender, RoutedEventArgs e)
+        {
+            MyMessage.Text += "😊";
+        }
+
+        private void EmojiHearth_Click(object sender, RoutedEventArgs e)
+        {
+            MyMessage.Text += "❤️";
+        }
+
+        private void EmojiKiss_Click(object sender, RoutedEventArgs e)
+        {
+            MyMessage.Text += "😘";
+        }
+
+        private void EmojiSad_Click(object sender, RoutedEventArgs e)
+        {
+            MyMessage.Text += "😢";
+        }
     }
 }

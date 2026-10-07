@@ -10,46 +10,50 @@ namespace ChessGame2.Assets
     internal class PieceImages
     {
 
-        public Uri RookBlackImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Blacks\Chess_rdt60.png");
-
-        public Uri KingBlackImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Blacks\Chess_kdt60.png");
-
-        public Uri QueenBlackImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Blacks\Chess_qdt60.png");
-
-        public Uri BishopBlackImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Blacks\Chess_bdt60.png");
-
-        public Uri KnightBlackImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Blacks\Chess_ndt60.png");
-
-        public Uri PawnBlackImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Blacks\Chess_pdt60.png");
-
-
         // =========================
         // WHITE PIECES
         // =========================
 
         public Uri RookWhiteImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Whites\Chess_rlt60.png");
+            new Uri("pack://application:,,,/Assets/Whites/Chess_rlt60.png");
 
         public Uri KingWhiteImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Whites\Chess_klt60.png");
+            new Uri("pack://application:,,,/Assets/Whites/Chess_klt60.png");
 
         public Uri QueenWhiteImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Whites\Chess_qlt60.png");
+            new Uri("pack://application:,,,/Assets/Whites/Chess_qlt60.png");
 
         public Uri BishopWhiteImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Whites\Chess_blt60.png");
+            new Uri("pack://application:,,,/Assets/Whites/Chess_blt60.png");
 
         public Uri KnightWhiteImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Whites\Chess_nlt60.png");
+            new Uri("pack://application:,,,/Assets/Whites/Chess_nlt60.png");
 
         public Uri PawnWhiteImagePath { get; } =
-            new Uri(@"C:\Users\Casper\source\repos\ChessGame\ChessGame\Assets\Whites\Chess_plt60.png");
+            new Uri("pack://application:,,,/Assets/Whites/Chess_plt60.png");
+
+
+        // =========================
+        // BLACK PIECES
+        // =========================
+
+        public Uri RookBlackImagePath { get; } =
+            new Uri("pack://application:,,,/Assets/Blacks/Chess_rdt60.png");
+
+        public Uri KingBlackImagePath { get; } =
+            new Uri("pack://application:,,,/Assets/Blacks/Chess_kdt60.png");
+
+        public Uri QueenBlackImagePath { get; } =
+            new Uri("pack://application:,,,/Assets/Blacks/Chess_qdt60.png");
+
+        public Uri BishopBlackImagePath { get; } =
+            new Uri("pack://application:,,,/Assets/Blacks/Chess_bdt60.png");
+
+        public Uri KnightBlackImagePath { get; } =
+            new Uri("pack://application:,,,/Assets/Blacks/Chess_ndt60.png");
+
+        public Uri PawnBlackImagePath { get; } =
+            new Uri("pack://application:,,,/Assets/Blacks/Chess_pdt60.png");
 
 
         // =========================

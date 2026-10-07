@@ -21,7 +21,7 @@ namespace ChessGame2
     public partial class NameForm : Window
     {
         public string PlayerName;
-
+        public string IpAddress;
         public NameForm()
         {
             InitializeComponent();
@@ -35,12 +35,20 @@ namespace ChessGame2
                 return;
             }
 
-            string playerName = userName.Text;
+            try
+            {
+                string playerName = userName.Text;
+                string ipAddress = ip_textbox.Text; // Burayı kendi IP TextBox adınla değiştir
 
-            MainWindow mainWindow = new MainWindow(playerName);
-            mainWindow.Show();
+                MainWindow mainWindow = new MainWindow(playerName, ipAddress);
+                mainWindow.Show();
 
-            this.Close();
+                this.Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.ToString());
+            }
         }
     }
 }

@@ -122,6 +122,21 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Resource Include="Assets\Blacks\Chess_bdt60.png" />
+    <Resource Include="Assets\Blacks\Chess_kdt60.png" />
+    <Resource Include="Assets\Blacks\Chess_ndt60.png" />
+    <Resource Include="Assets\Blacks\Chess_pdt60.png" />
+    <Resource Include="Assets\Blacks\Chess_qdt60.png" />
+    <Resource Include="Assets\Blacks\Chess_rdt60.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="Assets\Whites\Chess_blt60.png" />
+    <Resource Include="Assets\Whites\Chess_klt60.png" />
+    <Resource Include="Assets\Whites\Chess_nlt60.png" />
+    <Resource Include="Assets\Whites\Chess_plt60.png" />
+    <Resource Include="Assets\Whites\Chess_qlt60.png" />
+    <Resource Include="Assets\Whites\Chess_rlt60.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

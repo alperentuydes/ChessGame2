@@ -5,15 +5,19 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:ChessGame2"
         mc:Ignorable="d"
-        Title="NameForm" Height="250" Width="600">
+        Title="NameForm" Height="350" Width="600">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="50"></RowDefinition>
             <RowDefinition></RowDefinition>
             <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
+            <RowDefinition></RowDefinition>
         </Grid.RowDefinitions>
-        <Label  FontWeight="Bold" FontSize="25" Content="Oyuncu İsmi" VerticalAlignment="Center"></Label>
-        <TextBox Grid.Row="1" Margin="15" Background="LightGray" FontSize="25" x:Name="userName"></TextBox>
-        <Button Grid.Row="2" Width="100" Height="50" Content="Okey" FontSize="25" HorizontalAlignment="Right" Margin="20" Click="Button_Click"></Button>
+        <Label  FontWeight="Bold" FontSize="22" Content="Oyuncu İsmi" VerticalAlignment="Center"></Label>
+        <TextBox Grid.Row="1" Margin="15" Background="LightGray" FontSize="19" x:Name="userName"></TextBox>
+        <Label Content="IP" Grid.Row="2" FontSize="22"></Label>
+        <TextBox Grid.Row="3" Margin="15" Background="LightGray" FontSize="19" x:Name="ip_textbox"></TextBox>
+        <Button Grid.Row="4" Width="100" Content="Okey" FontSize="16" HorizontalAlignment="Right" Margin="20" Click="Button_Click"></Button>
     </Grid>
 </Window>
